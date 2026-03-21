@@ -15,15 +15,16 @@ const config: HardhatUserConfig = {
     },
   },
   solidity: {
-    version: "0.8.4",
+    version: "0.8.34",
     settings: {
       optimizer: {
         enabled: true,
-        runs: 9999,
+        runs: 100000,
       },
       metadata: {
         bytecodeHash: "none",
       },
+      evmVersion: "osaka",
     },
   },
   gasReporter: {
