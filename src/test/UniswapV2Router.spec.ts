@@ -1,14 +1,15 @@
-import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { Contract } from "ethers";
-import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { network } from "hardhat";
 import {
   expandTo18Decimals,
   MINIMUM_LIQUIDITY,
   UniswapVersion,
 } from "./shared/utilities";
-import { UniswapV2Pair } from "../../typechain-types";
+import type { UniswapV2Pair } from "../../types/ethers-contracts";
+
+const { ethers, networkHelpers } = await network.connect();
+const { loadFixture, time } = networkHelpers;
 
 describe("UniswapV2Router", () => {
   async function v2Fixture() {
@@ -48,7 +49,8 @@ describe("UniswapV2Router", () => {
     await factoryV2.createPair(tokenAAddress, tokenBAddress);
     const pairAddress = await factoryV2.getPair(tokenAAddress, tokenBAddress);
     const pairFactory = await ethers.getContractFactory("UniswapV2Pair");
-    const pair = (await pairFactory.attach(pairAddress)) as UniswapV2Pair;
+    const attachedPair = await pairFactory.attach(pairAddress);
+    const pair = attachedPair as unknown as UniswapV2Pair;
 
     const token0Address = await pair.token0();
     const token0 = tokenAAddress === token0Address ? tokenA : tokenB;
@@ -379,6 +381,7 @@ describe("UniswapV2Router", () => {
   it("removeLiquidityWithPermit", async () => {
     const { router02, token0, token1, wallet, pair } =
       await loadFixture(v2Fixture);
+    const provider = wallet.provider!;
 
     const token0Amount = expandTo18Decimals(1);
     const token1Amount = expandTo18Decimals(4);
@@ -390,7 +393,7 @@ describe("UniswapV2Router", () => {
 
     const nonce = await pair.nonces(wallet.address);
     const tokenName = await pair.name();
-    const { chainId } = await wallet.provider.getNetwork();
+    const { chainId } = await provider.getNetwork();
     const sig = await wallet.signTypedData(
       // "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
       {
@@ -438,6 +441,7 @@ describe("UniswapV2Router", () => {
   it("removeLiquidityETHWithPermit", async () => {
     const { router02, wallet, WETHPartner, wethPair, WETH } =
       await loadFixture(v2Fixture);
+    const provider = wallet.provider!;
 
     const WETHPartnerAmount = expandTo18Decimals(1);
     const ETHAmount = expandTo18Decimals(4);
@@ -451,7 +455,7 @@ describe("UniswapV2Router", () => {
     const nonce = await wethPair.nonces(wallet.address);
 
     const tokenName = await wethPair.name();
-    const { chainId } = await wallet.provider.getNetwork();
+    const { chainId } = await provider.getNetwork();
 
     const sig = await wallet.signTypedData(
       // "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
@@ -595,7 +599,7 @@ describe("UniswapV2Router", () => {
         ethers.MaxUint256,
       );
       const receipt = await tx.wait();
-      expect(receipt!.gasUsed).to.eq(101097, "gas used");
+      expect(receipt!.gasUsed).to.eq(99446, "gas used");
     });
   });
 
@@ -790,6 +794,7 @@ describe("UniswapV2Router", () => {
         wethPair: WETHPair,
         WETH,
       } = await loadFixture(v2Fixture);
+      const provider = wallet.provider!;
 
       const WETHPartnerAmount = expandTo18Decimals(10);
       const ETHAmount = expandTo18Decimals(5);
@@ -806,13 +811,13 @@ describe("UniswapV2Router", () => {
 
       // ensure that setting price{0,1}CumulativeLast for the first time doesn't affect our gas math
       await time.setNextBlockTimestamp(
-        (await wallet.provider.getBlock("latest"))!.timestamp + 1,
+        (await provider.getBlock("latest"))!.timestamp + 1,
       );
       await pair.sync();
 
       const swapAmount = expandTo18Decimals(1);
       await time.setNextBlockTimestamp(
-        (await wallet.provider.getBlock("latest"))!.timestamp + 1,
+        (await provider.getBlock("latest"))!.timestamp + 1,
       );
       const tx = await router02.swapExactETHForTokens(
         0,
@@ -824,7 +829,7 @@ describe("UniswapV2Router", () => {
         },
       );
       const receipt = await tx.wait();
-      expect(receipt!.gasUsed).to.eq(138689, "gas used");
+      expect(receipt!.gasUsed).to.eq(137206, "gas used");
     }).retries(3);
   });
 

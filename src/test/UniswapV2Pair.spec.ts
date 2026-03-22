@@ -1,15 +1,20 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
+import { network } from "hardhat";
 
 import {
   expandTo18Decimals,
   encodePrice,
   MINIMUM_LIQUIDITY,
 } from "./shared/utilities";
-import { UniswapV2Pair, ERC20 } from "../../typechain-types";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
-import { Signer } from "ethers";
+import type {
+  ERC20,
+  UniswapV2Factory,
+  UniswapV2Pair,
+} from "../../types/ethers-contracts";
+import type { Signer } from "ethers";
+
+const { ethers, networkHelpers } = await network.connect();
+const { loadFixture, time } = networkHelpers;
 
 describe("UniswapV2Pair", () => {
   async function fixture() {
@@ -19,16 +24,15 @@ describe("UniswapV2Pair", () => {
     ]);
     const [wallet, other] = await ethers.getSigners();
 
-    const factory = await (
+    const deployedFactory = await (
       await ethers.getContractFactory("UniswapV2Factory")
     ).deploy(wallet.address);
+    const factory = deployedFactory as unknown as UniswapV2Factory;
 
-    const tokenA = (await erc20Factory.deploy(
-      expandTo18Decimals(10000),
-    )) as ERC20;
-    const tokenB = (await erc20Factory.deploy(
-      expandTo18Decimals(10000),
-    )) as ERC20;
+    const deployedTokenA = await erc20Factory.deploy(expandTo18Decimals(10000));
+    const tokenA = deployedTokenA as unknown as ERC20;
+    const deployedTokenB = await erc20Factory.deploy(expandTo18Decimals(10000));
+    const tokenB = deployedTokenB as unknown as ERC20;
 
     const [tokenAAddress, tokenBAddress] = await Promise.all([
       tokenA.getAddress(),
@@ -36,9 +40,10 @@ describe("UniswapV2Pair", () => {
     ]);
 
     await factory.createPair(tokenAAddress, tokenBAddress);
-    const pair = pairFactory.attach(
+    const attachedPair = pairFactory.attach(
       await factory.getPair(tokenAAddress, tokenBAddress),
-    ) as UniswapV2Pair;
+    );
+    const pair = attachedPair as unknown as UniswapV2Pair;
     const token0Address = await pair.token0();
     const token0 = tokenAAddress === token0Address ? tokenA : tokenB;
     const token1 = tokenAAddress === token0Address ? tokenB : tokenA;
@@ -261,6 +266,7 @@ describe("UniswapV2Pair", () => {
 
   it("swap:gas", async () => {
     const { pair, wallet, token0, token1 } = await loadFixture(fixture);
+    const provider = wallet.provider!;
 
     const token0Amount = expandTo18Decimals(5);
     const token1Amount = expandTo18Decimals(10);
@@ -275,11 +281,11 @@ describe("UniswapV2Pair", () => {
 
     // ensure that setting price{0,1}CumulativeLast for the first time doesn't affect our gas math
     await ethers.provider.send("evm_mine", [
-      (await wallet.provider.getBlock("latest"))!.timestamp + 1,
+      (await provider.getBlock("latest"))!.timestamp + 1,
     ]);
 
     await time.setNextBlockTimestamp(
-      (await wallet.provider.getBlock("latest"))!.timestamp + 1,
+      (await provider.getBlock("latest"))!.timestamp + 1,
     );
     await pair.sync();
 
@@ -287,11 +293,11 @@ describe("UniswapV2Pair", () => {
     const expectedOutputAmount = 453305446940074565n;
     await token1.transfer(await pair.getAddress(), swapAmount);
     await time.setNextBlockTimestamp(
-      (await wallet.provider.getBlock("latest"))!.timestamp + 1,
+      (await provider.getBlock("latest"))!.timestamp + 1,
     );
     const tx = await pair.swap(expectedOutputAmount, 0, wallet.address, "0x");
     const receipt = await tx.wait();
-    expect(receipt!.gasUsed).to.eq(73959);
+    expect(receipt!.gasUsed).to.eq(73434);
   });
 
   it("burn", async () => {

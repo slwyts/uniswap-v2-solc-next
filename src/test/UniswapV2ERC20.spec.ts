@@ -1,8 +1,11 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
-import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+import { network } from "hardhat";
+import type { ERC20 } from "../../types/ethers-contracts";
 
 import { expandTo18Decimals, UniswapVersion } from "./shared/utilities";
+
+const { ethers, networkHelpers } = await network.connect();
+const { loadFixture } = networkHelpers;
 
 const TOTAL_SUPPLY = expandTo18Decimals(10000);
 const TEST_AMOUNT = expandTo18Decimals(10);
@@ -10,20 +13,22 @@ const TEST_AMOUNT = expandTo18Decimals(10);
 describe("UniswapV2ERC20", () => {
   async function fixture() {
     const factory = await ethers.getContractFactory("ERC20");
-    const token = await factory.deploy(TOTAL_SUPPLY);
+    const deployedToken = await factory.deploy(TOTAL_SUPPLY);
+    const token = deployedToken as unknown as ERC20;
     const [wallet, other] = await ethers.getSigners();
     return { token, wallet, other };
   }
 
   it("name, symbol, decimals, totalSupply, balanceOf, DOMAIN_SEPARATOR, PERMIT_TYPEHASH", async () => {
     const { token, wallet } = await loadFixture(fixture);
+    const provider = wallet.provider!;
     const name = await token.name();
     expect(name).to.eq("Uniswap V2");
     expect(await token.symbol()).to.eq("UNI-V2");
     expect(await token.decimals()).to.eq(18);
     expect(await token.totalSupply()).to.eq(TOTAL_SUPPLY);
     expect(await token.balanceOf(wallet.address)).to.eq(TOTAL_SUPPLY);
-    const { chainId } = await wallet.provider.getNetwork();
+    const { chainId } = await provider.getNetwork();
 
     expect(await token.DOMAIN_SEPARATOR()).to.eq(
       ethers.keccak256(
@@ -75,10 +80,12 @@ describe("UniswapV2ERC20", () => {
 
   it("transfer:fail", async () => {
     const { token, wallet, other } = await loadFixture(fixture);
-    await expect(token.transfer(other.address, TOTAL_SUPPLY + 1n)).to.be
-      .reverted; // ds-math-sub-underflow
-    await expect(token.connect(other).transfer(wallet.address, 1n)).to.be
-      .reverted; // ds-math-sub-underflow
+    await expect(token.transfer(other.address, TOTAL_SUPPLY + 1n)).to.revert(
+      ethers,
+    ); // ds-math-sub-underflow
+    await expect(token.connect(other).transfer(wallet.address, 1n)).to.revert(
+      ethers,
+    ); // ds-math-sub-underflow
   });
 
   it("transferFrom", async () => {
@@ -120,9 +127,10 @@ describe("UniswapV2ERC20", () => {
 
   it("permit", async () => {
     const { token, wallet, other } = await loadFixture(fixture);
+    const provider = wallet.provider!;
     const nonce = await token.nonces(wallet.address);
     const deadline = ethers.MaxUint256;
-    const { chainId } = await wallet.provider.getNetwork();
+    const { chainId } = await provider.getNetwork();
     const tokenName = await token.name();
 
     const sig = await wallet.signTypedData(

@@ -2,17 +2,18 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "lib": ["ES2023"],
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "lib": ["ES2024"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "noImplicitAny": true,
     "outDir": "dist",
     "resolveJsonModule": true,
+    "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "target": "es2021"
+    "target": "esnext"
   },
-  "exclude": ["node_modules"],
+  "exclude": ["node_modules", "artifacts", "cache", "dist", "typechain-types"],
   "files": ["./hardhat.config.ts"],
-  "include": ["src", "typechain-types"]
+  "include": ["src", "types/ethers-contracts"]
 }

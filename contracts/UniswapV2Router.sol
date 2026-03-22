@@ -349,9 +349,10 @@ contract UniswapV2Router is IUniswapV2Router {
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOut)
                 : (amountOut, uint256(0));
-            address to = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, output, path[i + 2])
-                : _to;
+            address to =
+                i < path.length - 2
+                    ? UniswapV2Library.pairFor(factory, output, path[i + 2])
+                    : _to;
             IUniswapV2Pair(UniswapV2Library.pairFor(factory, input, output))
                 .swap(amount0Out, amount1Out, to, new bytes(0));
         }
@@ -553,8 +554,7 @@ contract UniswapV2Router is IUniswapV2Router {
                     ? (reserve0, reserve1)
                     : (reserve1, reserve0);
                 amountInput =
-                    IERC20(input).balanceOf(address(pair)) -
-                    reserveInput;
+                    IERC20(input).balanceOf(address(pair)) - reserveInput;
                 amountOutput = UniswapV2Library.getAmountOut(
                     amountInput,
                     reserveInput,
@@ -564,9 +564,10 @@ contract UniswapV2Router is IUniswapV2Router {
             (uint256 amount0Out, uint256 amount1Out) = input == token0
                 ? (uint256(0), amountOutput)
                 : (amountOutput, uint256(0));
-            address to = i < path.length - 2
-                ? UniswapV2Library.pairFor(factory, output, path[i + 2])
-                : _to;
+            address to =
+                i < path.length - 2
+                    ? UniswapV2Library.pairFor(factory, output, path[i + 2])
+                    : _to;
             pair.swap(amount0Out, amount1Out, to, new bytes(0));
         }
     }
