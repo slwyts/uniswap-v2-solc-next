@@ -2,7 +2,7 @@ import { task } from "hardhat/config";
 import type { HardhatRuntimeEnvironment } from "hardhat/types/hre";
 import type { TaskArguments } from "hardhat/types/tasks";
 
-task("accounts", "Prints the list of accounts").setInlineAction(
+export default task("accounts", "Prints the list of accounts").setInlineAction(
   async (_taskArgs: TaskArguments, hre: HardhatRuntimeEnvironment) => {
     const { ethers } = await hre.network.connect();
     const accounts = await ethers.getSigners();
@@ -11,4 +11,4 @@ task("accounts", "Prints the list of accounts").setInlineAction(
       console.log(account.address);
     }
   },
-);
+).build();
